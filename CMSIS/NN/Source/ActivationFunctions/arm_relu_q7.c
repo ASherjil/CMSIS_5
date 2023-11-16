@@ -94,7 +94,6 @@ void arm_relu_q7(q7_t *data, uint16_t size)
     /* Run the following code as reference implementation for cores without DSP extension */
 
     uint16_t i;
-
     for (i = 0; i < size; i++)
     {
         if (data[i] < 0)

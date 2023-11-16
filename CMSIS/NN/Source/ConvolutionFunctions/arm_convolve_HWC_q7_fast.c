@@ -31,6 +31,7 @@
 #include "arm_nnfunctions.h"
 #include "arm_nnsupportfunctions.h"
 
+
 /**
  *  @ingroup groupNN
  */
@@ -366,33 +367,36 @@ arm_convolve_HWC_q7_fast(const q7_t * Im_in,
         return ARM_MATH_SIZE_MISMATCH;
     }
 
-    for (i = 0; i < ch_im_out; i++)
     {
-        for (j = 0; j < dim_im_out; j++)
+        #pragma omp parallel for collapse(3) private(conv_out, in_row, in_col, m, n, l)
+        for (i = 0; i < ch_im_out; i++)
         {
-            for (k = 0; k < dim_im_out; k++)
+            for (j = 0; j < dim_im_out; j++)
             {
-                conv_out = (bias[i] << bias_shift) + NN_ROUND(out_shift);
-                for (m = 0; m < dim_kernel; m++)
+                for (k = 0; k < dim_im_out; k++)
                 {
-                    for (n = 0; n < dim_kernel; n++)
+                    conv_out = (bias[i] << bias_shift) + NN_ROUND(out_shift);
+                    for (m = 0; m < dim_kernel; m++)
                     {
-                        // if-for implementation
-                        in_row = stride * j + m - padding;
-                        in_col = stride * k + n - padding;
-                        if (in_row >= 0 && in_col >= 0 && in_row < dim_im_in && in_col < dim_im_in)
+                        for (n = 0; n < dim_kernel; n++)
                         {
-                            for (l = 0; l < ch_im_in; l++)
+                            // if-for implementation
+                            in_row = stride * j + m - padding;
+                            in_col = stride * k + n - padding;
+                            if (in_row >= 0 && in_col >= 0 && in_row < dim_im_in && in_col < dim_im_in)
                             {
-                                conv_out +=
-                                    Im_in[(in_row * dim_im_in + in_col) * ch_im_in +
-                                          l] * wt[i * ch_im_in * dim_kernel * dim_kernel + (m * dim_kernel +
-                                                                                            n) * ch_im_in + l];
+                                for (l = 0; l < ch_im_in; l++)
+                                {
+                                    conv_out +=
+                                        Im_in[(in_row * dim_im_in + in_col) * ch_im_in +
+                                              l] * wt[i * ch_im_in * dim_kernel * dim_kernel + (m * dim_kernel +
+                                                                                                n) * ch_im_in + l];
+                                }
                             }
                         }
                     }
+                    Im_out[i + (j * dim_im_out + k) * ch_im_out] = (q7_t) __SSAT((conv_out >> out_shift), 8);
                 }
-                Im_out[i + (j * dim_im_out + k) * ch_im_out] = (q7_t) __SSAT((conv_out >> out_shift), 8);
             }
         }
     }

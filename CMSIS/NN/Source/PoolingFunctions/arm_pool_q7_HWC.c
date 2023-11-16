@@ -262,14 +262,15 @@ arm_maxpool_q7_HWC(q7_t * Im_in,
     /* Run the following code as reference implementation for Cortex-M0 and Cortex-M3 */
     int16_t   i_ch_in, i_x, i_y;
     int16_t   k_x, k_y;
-
+    int max;
+    #pragma omp parallel for collapse(3) private(k_y, k_x, max)
     for (i_ch_in = 0; i_ch_in < ch_im_in; i_ch_in++)
     {
         for (i_y = 0; i_y < dim_im_out; i_y++)
         {
             for (i_x = 0; i_x < dim_im_out; i_x++)
             {
-                int       max = -129;
+                max = -129;
                 for (k_y = i_y * stride - padding; k_y < i_y * stride - padding + dim_kernel; k_y++)
                 {
                     for (k_x = i_x * stride - padding; k_x < i_x * stride - padding + dim_kernel; k_x++)
