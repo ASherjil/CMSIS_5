@@ -358,7 +358,7 @@ arm_convolve_HWC_q7_fast(const q7_t * Im_in,
     /* Run the following code as reference implementation for Cortex-M0 and Cortex-M3 */
 
     int  i, j, k, l, m, n;
-    int       conv_out;
+    int conv_out;
     int in_row, in_col;
 
     if (ch_im_in % 4 != 0 || ch_im_out % 2 != 0)
@@ -367,39 +367,38 @@ arm_convolve_HWC_q7_fast(const q7_t * Im_in,
         return ARM_MATH_SIZE_MISMATCH;
     }
 
+    #pragma omp parallel for private(j, k, l, m, n, conv_out, in_row, in_col)
+    for (i = 0; i < ch_im_out; i++)
     {
-        #pragma omp parallel for collapse(3) private(conv_out, in_row, in_col, m, n, l)
-        for (i = 0; i < ch_im_out; i++)
+        for (j = 0; j < dim_im_out; j++)
         {
-            for (j = 0; j < dim_im_out; j++)
+            for (k = 0; k < dim_im_out; k++)
             {
-                for (k = 0; k < dim_im_out; k++)
+                conv_out = (bias[i] << bias_shift) + NN_ROUND(out_shift);
+                for (m = 0; m < dim_kernel; m++)
                 {
-                    conv_out = (bias[i] << bias_shift) + NN_ROUND(out_shift);
-                    for (m = 0; m < dim_kernel; m++)
+                    for (n = 0; n < dim_kernel; n++)
                     {
-                        for (n = 0; n < dim_kernel; n++)
+                        // if-for implementation
+                        in_row = stride * j + m - padding;
+                        in_col = stride * k + n - padding;
+                        if (in_row >= 0 && in_col >= 0 && in_row < dim_im_in && in_col < dim_im_in)
                         {
-                            // if-for implementation
-                            in_row = stride * j + m - padding;
-                            in_col = stride * k + n - padding;
-                            if (in_row >= 0 && in_col >= 0 && in_row < dim_im_in && in_col < dim_im_in)
+                            for (l = 0; l < ch_im_in; l++)
                             {
-                                for (l = 0; l < ch_im_in; l++)
-                                {
-                                    conv_out +=
-                                        Im_in[(in_row * dim_im_in + in_col) * ch_im_in +
-                                              l] * wt[i * ch_im_in * dim_kernel * dim_kernel + (m * dim_kernel +
-                                                                                                n) * ch_im_in + l];
-                                }
+                                conv_out +=
+                                    Im_in[(in_row * dim_im_in + in_col) * ch_im_in +
+                                        l] * wt[i * ch_im_in * dim_kernel * dim_kernel + (m * dim_kernel +
+                                                                                            n) * ch_im_in + l];
                             }
                         }
                     }
-                    Im_out[i + (j * dim_im_out + k) * ch_im_out] = (q7_t) __SSAT((conv_out >> out_shift), 8);
                 }
+                Im_out[i + (j * dim_im_out + k) * ch_im_out] = (q7_t) __SSAT((conv_out >> out_shift), 8);
             }
         }
     }
+
 
 #endif                          /* ARM_MATH_DSP */
 

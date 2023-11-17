@@ -237,8 +237,9 @@ arm_convolve_HWC_q7_RGB(const q7_t * Im_in,
     {
         return ARM_MATH_SIZE_MISMATCH;
     }
-    
-    #pragma omp parallel for collapse(3) private(m, n, l, conv_out, in_row, in_col)
+
+    // parallelise only the outer loop 
+    #pragma omp parallel for private(j, k, l, m, n, conv_out, in_row, in_col)
     for (i = 0; i < ch_im_out; i++)
     {
         for (j = 0; j < dim_im_out; j++)
@@ -259,7 +260,7 @@ arm_convolve_HWC_q7_RGB(const q7_t * Im_in,
                             {
                                 conv_out +=
                                     Im_in[(in_row * dim_im_in + in_col) * ch_im_in +
-                                          l] * wt[i * ch_im_in * dim_kernel * dim_kernel + (m * dim_kernel +
+                                        l] * wt[i * ch_im_in * dim_kernel * dim_kernel + (m * dim_kernel +
                                                                                             n) * ch_im_in + l];
                             }
                         }
@@ -269,6 +270,7 @@ arm_convolve_HWC_q7_RGB(const q7_t * Im_in,
             }
         }
     }
+
 
 #endif                          /* ARM_MATH_DSP */
 
