@@ -263,6 +263,7 @@ arm_maxpool_q7_HWC(q7_t * Im_in,
     int16_t   i_ch_in, i_x, i_y;
     int16_t   k_x, k_y;
     int max;
+
     #pragma omp parallel for collapse(3) private(k_y, k_x, max)
     for (i_ch_in = 0; i_ch_in < ch_im_in; i_ch_in++)
     {
